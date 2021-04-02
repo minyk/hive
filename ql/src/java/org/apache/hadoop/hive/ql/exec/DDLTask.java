@@ -2742,7 +2742,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
   private String propertiesToString(Map<String, String> props, List<String> exclude) {
     String prop_string = "";
     if (!props.isEmpty()) {
-      Map<String, String> properties = new TreeMap<String, String>(props);
+      Map<String, String> properties = new TreeMap<String, String>(redactTblProperties(props));
       List<String> realProps = new ArrayList<String>();
       for (String key : properties.keySet()) {
         if (properties.get(key) != null && (exclude == null || !exclude.contains(key))) {
@@ -2753,6 +2753,15 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
       prop_string += StringUtils.join(realProps, ", \n");
     }
     return prop_string;
+  }
+
+  private Map<String, String> redactTblProperties(Map<String, String> props) {
+    for (Entry<String,String> e : props.entrySet()) {
+      if (e.getKey().startsWith(HiveConf.hadoopS3APerBucketConfigPrefix)) {
+        props.replace(e.getKey(), "REDACTED");
+      }
+    }
+    return props
   }
 
   public static StringBuilder appendSerdeParams(
@@ -3697,7 +3706,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
             tblProps.put(stat, valueMap.get(stat).toString());
           }
           tblProps.put(StatsSetupConst.NUM_PARTITIONS, Integer.toString(numParts));
-          tbl.setParameters(tblProps);
+          tbl.setParameters(redactTblProperties(tblProps));
         }
       } else {
         if (descTbl.isFormatted()) {
@@ -3735,7 +3744,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
                   StatsSetupConst.removeColumnStatsState(tblProps, colNames);
                 }
               }
-              tbl.setParameters(tblProps);
+              tbl.setParameters(redactTblProperties(tblProps));
             } else {
               cols = Hive.getFieldsFromDeserializer(colPath, deserializer);
               colStats = db.getTableColumnStatistics(dbTab[0].toLowerCase(), dbTab[1].toLowerCase(), colNames);
@@ -5291,6 +5300,12 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     if (sd.isSetLocation())
     {
       path = new Path(sd.getLocation());
+    }
+
+    for (Entry<String,String> e: table.getParameters().entrySet()) {
+      if(e.getKey().startsWith(HiveConf.hadoopS3APerBucketConfigPrefix)) {
+        conf.set(e.getKey(),e.getValue());
+      }
     }
 
     if (path != null)

@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -971,6 +972,15 @@ public final class PlanUtils {
   }
 
   public static void configureJobConf(TableDesc tableDesc, JobConf jobConf) {
+    Properties properties = tableDesc.getProperties();
+    Enumeration<String> enums = (Enumeration<String>) properties.propertyNames();
+    while (enums.hasMoreElements()) {
+      String key = enums.nextElement();
+      if (key.startsWith(HiveConf.hadoopS3APerBucketConfigPrefix)) {
+        jobConf.set(key,properties.getProperty(key),"tblproperty");
+      }
+    }
+
     String handlerClass = tableDesc.getProperties().getProperty(
         org.apache.hadoop.hive.metastore.api.hive_metastoreConstants.META_TABLE_STORAGE);
     try {

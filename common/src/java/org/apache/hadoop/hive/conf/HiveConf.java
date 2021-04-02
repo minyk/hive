@@ -408,6 +408,7 @@ public class HiveConf extends Configuration {
     return llapDaemonVarsSet;
   }
 
+  public static final String hadoopS3APerBucketConfigPrefix = "fs.s3a.bucket";
 
   /**
    * ConfVars.
